@@ -1,4 +1,4 @@
-"""LLM 抽象层。
+"""LLM 抽象层
 
 - BaseLLM.chat(messages) -> str
 - OpenAILLM: 任意 OpenAI 兼容服务 + 指数退避重试
@@ -54,7 +54,7 @@ class OpenAILLM(BaseLLM):
         raise RuntimeError(f"LLM 连续失败 {self._max_retries} 次: {last_err}")
 
 
-# ---------------- 离线 Mock 剧情 ----------------
+# 离线 Mock 剧情 
 # 有缺陷的 fib（经典的缺少临时变量 / 覆盖错误）
 _BUGGY_CODE = (
     "def fib(n):\n"
@@ -120,7 +120,7 @@ def build_llm(config, demo: bool = False) -> BaseLLM:
     return MockLLM() if demo else OpenAILLM(config)
 
 
-# ---------------- JSON 请求 + 纠错 ----------------
+# JSON 请求 + 纠错
 def extract_json(text: str) -> dict:
     """从可能带围栏/说明文字的模型输出中抽取 JSON 对象。"""
     m = _FENCE_RE.search(text)

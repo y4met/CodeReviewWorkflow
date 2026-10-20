@@ -1,0 +1,6 @@
+# 代码审查 Workflow 依赖
+# LLM：OpenAI 兼容 SDK（OpenAI / DeepSeek / Kimi / 通义千问 ...）
+openai>=1.0.0
+python-dotenv>=1.0.0
+# 可视化 Workflow 编排界面
+flask>=3.0.0

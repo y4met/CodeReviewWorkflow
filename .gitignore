@@ -1,0 +1,19 @@
+# 虚拟环境
+.venv/
+venv/
+
+# 环境变量（含密钥）
+.env
+
+# 运行检查点与日志（按需保留，默认不提交）
+runs/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / 临时
+.vscode/
+.idea/
+*.txt.tmp
