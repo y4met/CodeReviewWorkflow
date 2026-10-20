@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>代码审查 Workflow 编排台</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>3-Agent 代码审查 Workflow</h1>
+    <span id="runState" class="badge">就绪</span>
+  </header>
+
+  <main>
+    <!-- 左侧控制面板 -->
+    <aside class="panel">
+      <h3>发起流程</h3>
+      <label>需求描述</label>
+      <textarea id="requirement" rows="5" placeholder="例如：实现一个斐波那契函数 fib(n)，并通过自检"></textarea>
+
+      <label class="row"><input type="checkbox" id="demo"> 离线演示模式（无需 API Key）</label>
+      <label class="row"><input type="checkbox" id="parallel" checked> 启用并行审查</label>
+      <label>最大审查轮次 <input type="number" id="maxRounds" value="3" min="1" max="10" style="width:60px"></label>
+
+      <button id="runBtn">▶ 运行 Workflow</button>
+      <button id="resumeBtn" class="secondary" disabled>↻ 恢复当前运行</button>
+
+      <h3 style="margin-top:18px">历史运行</h3>
+      <div id="runs" class="runs"></div>
+    </aside>
+
+    <!-- 中间流程图 -->
+    <section class="canvas-wrap">
+      <h3>Workflow 编排图</h3>
+      <svg id="graph" viewBox="0 0 970 430" width="100%"></svg>
+      <div class="legend">
+        <span><i class="d task"></i>任务</span>
+        <span><i class="d branch"></i>并行分支</span>
+        <span><i class="d decision"></i>条件</span>
+        <span><i class="d ok"></i>成功</span>
+        <span><i class="d fail"></i>失败/运行</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部：日志 / 代码 / 问题 -->
+  <section class="bottom">
+    <div class="tabs">
+      <button data-tab="log" class="active">执行日志 / 状态追踪</button>
+      <button data-tab="code">当前代码</button>
+      <button data-tab="issues">问题清单</button>
+      <button data-tab="test">动态测试输出</button>
+    </div>
+    <div id="tab-log" class="tabbody"><pre id="log">(尚未运行)</pre></div>
+    <div id="tab-code" class="tabbody hidden"><pre id="code">(无)</pre></div>
+    <div id="tab-issues" class="tabbody hidden"><pre id="issues">(无)</pre></div>
+    <div id="tab-test" class="tabbody hidden"><pre id="test">(无)</pre></div>
+  </section>
+
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>

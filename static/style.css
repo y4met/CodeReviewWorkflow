@@ -1,0 +1,99 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #f4f6fa; color: #1f2937;
+}
+header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 20px; background: #1e293b; color: #fff;
+}
+header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+.badge {
+  font-size: 12px; padding: 3px 10px; border-radius: 12px;
+  background: #475569;
+}
+.badge.running { background: #d97706; }
+.badge.success { background: #16a34a; }
+.badge.failed { background: #dc2626; }
+
+main { display: flex; gap: 14px; padding: 14px; }
+.panel {
+  width: 300px; flex-shrink: 0; background: #fff; border-radius: 10px;
+  padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.panel h3 { margin: 0 0 10px; font-size: 14px; color: #334155; }
+.panel label { display: block; font-size: 13px; margin: 8px 0 4px; color: #475569; }
+.panel label.row { display: flex; align-items: center; gap: 6px; }
+textarea, input[type=number] {
+  width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;
+  font-size: 13px; resize: vertical;
+}
+button {
+  width: 100%; margin-top: 10px; padding: 9px; border: none; border-radius: 6px;
+  background: #2563eb; color: #fff; font-size: 14px; cursor: pointer;
+}
+button:hover { background: #1d4ed8; }
+button.secondary { background: #64748b; }
+button:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+.runs { max-height: 200px; overflow-y: auto; font-size: 12px; }
+.runs .run {
+  padding: 6px; border-bottom: 1px solid #eef2f7; cursor: pointer;
+}
+.runs .run:hover { background: #f1f5f9; }
+.runs .st { font-weight: 600; }
+.runs .st.success { color: #16a34a; }
+.runs .st.failed { color: #dc2626; }
+
+.canvas-wrap {
+  flex: 1; background: #fff; border-radius: 10px; padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.canvas-wrap h3 { margin: 0 0 6px; font-size: 14px; color: #334155; }
+#graph { background: #fbfdff; border: 1px solid #e2e8f0; border-radius: 8px; }
+
+.legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #64748b; }
+.legend .d { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+.legend .task { background: #dbeafe; border: 1px solid #60a5fa; }
+.legend .branch { background: #ede9fe; border: 1px solid #a78bfa; }
+.legend .decision { background: #fef3c7; border: 1px solid #f59e0b; }
+.legend .ok { background: #16a34a; }
+.legend .fail { background: #dc2626; }
+
+/* SVG 节点 */
+.node rect { stroke-width: 1.5; rx: 8; }
+.node.task rect { fill: #dbeafe; stroke: #60a5fa; }
+.node.branch rect { fill: #ede9fe; stroke: #a78bfa; }
+.node.decision rect { fill: #fef3c7; stroke: #f59e0b; }
+.node.end rect { fill: #dcfce7; stroke: #22c55e; }
+.node text { font-size: 13px; text-anchor: middle; fill: #1e293b; font-weight: 500; }
+.node.running rect { stroke-width: 3; stroke: #d97706; animation: pulse 1s infinite; }
+.node.success rect { fill: #bbf7d0; stroke: #16a34a; }
+.node.failed rect { fill: #fecaca; stroke: #dc2626; }
+@keyframes pulse { 50% { opacity: .55; } }
+
+.edge { stroke: #94a3b8; stroke-width: 1.6; fill: none; }
+.edge.fork, .edge.join { stroke: #8b5cf6; }
+.edge.success { stroke: #16a34a; stroke-width: 2; }
+.edge.fail { stroke: #dc2626; stroke-width: 2; }
+.edge.loop { stroke: #f59e0b; stroke-dasharray: 6 4; }
+.edge.active { stroke: #d97706; stroke-width: 3; }
+.edge-label { font-size: 11px; fill: #475569; }
+
+.bottom { margin: 0 14px 16px; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tabs { display: flex; gap: 4px; padding: 8px 8px 0; }
+.tabs button {
+  width: auto; margin: 0; background: #e2e8f0; color: #334155; padding: 8px 14px;
+}
+.tabs button.active { background: #2563eb; color: #fff; }
+.tabbody { padding: 12px; }
+.tabbody.hidden { display: none; }
+.tabbody pre {
+  margin: 0; font-family: Consolas, monospace; font-size: 12.5px;
+  white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto;
+}
+.ev-info { color: #64748b; }
+.ev-running { color: #b45309; }
+.ev-success { color: #15803d; }
+.ev-failed { color: #dc2626; font-weight: 600; }
+.ev-router { color: #7c3aed; }
