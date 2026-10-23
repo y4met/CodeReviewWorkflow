@@ -17,3 +17,6 @@ __pycache__/
 .vscode/
 .idea/
 *.txt.tmp
+tests/.tmp/
+.test-tmp/
+.acl-recovery/

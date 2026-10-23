@@ -16,7 +16,7 @@
 | Agent 协作 | 黑板模式共享状态；结构化 JSON 作为 Agent 间消息协议；代码版本留痕 |
 | 高级流程控制 | 顺序执行、**条件分支**、**循环回环**、**并行 fan-out/fan-in** |
 | 可观测性 | 每节点开始/结束/耗时/状态事件，控制台 + `trace.json` + Web 时间线 |
-| 错误处理 | LLM 指数退避、JSON 纠错重试、节点级重试、线程级兜底 |
+| 错误处理 | LLM 指数退避、JSON 纠错重试 |
 | 恢复机制 | 每节点后落**检查点**，失败/中断后可 `resume` 从断点继续 |
 | 可视化 | Flask Web 编排台：流程图、实时节点状态、发起/恢复运行、历史记录 |
 | 离线演示 | MockLLM 无需 API Key 即可演示含并行与回环的完整流程 |
@@ -37,8 +37,6 @@ flowchart TD
     X -.重新审查.-> F1
     X -.并行.-> F2
 ```
-
-执行层的实际节点更粗（`review` 节点内部并行跑两个分支），视图层把并行分支、条件菱形和回环都画出来。
 
 ---
 
@@ -91,17 +89,18 @@ flowchart LR
 
 真实模式下 LLM 网络等待与子进程执行**重叠**，缩短总耗时。任一分支异常不影响另一分支（容错 fan-out），错误进入合并步骤。
 
-**合并裁决规则**：动态测试通过 **且** 静态无 `major` 问题 → `review_passed=True`。
+**合并裁决规则**：动态测试通过 **且** 静态无 `major` 问题 → `review_passed=True`。动态测试以子进程退出码为准（有 `self_check` 时还要求出现 `all tests passed` 标记）；静态审查分支异常时按 **fail-closed** 处理，本轮不会判通过。
 
 ### 3.4 条件分支与循环
 
 - 路由表中每个节点可配「固定下一节点」或「路由函数」；
-- `review` 的路由函数：通过 → `END`；不通过且未达 `MAX_ROUNDS` → `fixer`；达到轮次上限 → 优雅结束（`passed=False`，不无限循环）；
+- `review` 的路由函数：通过 → `END`（`outcome=approved`）；不通过且未达 `MAX_ROUNDS` → `fixer`；达到轮次上限 → 优雅结束（`outcome=max_rounds`、`review_passed=False`，CLI 退出码 1）；
+- 流程状态 `status` 与交付结论 `outcome` 分离：`status` 表示流程是否正常跑完，`outcome` 取 `approved / max_rounds / failed`；
 - `fixer` 固定回到 `review`，形成回环。
 
 ### 3.5 检查点与恢复
 
-- 每个节点完成并确定下一节点后，`RunStore` 把完整状态写入 `runs/<run_id>/checkpoint.json`，事件写入 `trace.json`，并记录 `next_node`；
+- 每个节点完成并确定下一节点后，`RunStore` 把完整状态写入 `runs/<run_id>/checkpoint.json`，事件写入 `trace.json`，并记录 `next_node`；写入采用临时文件 + 原子替换，避免中断留下半个 JSON；
 - 节点中途失败：`next_node` 仍指向该节点，恢复时重跑；
 - CLI `--resume <id>` 或 Web「恢复」即可从断点继续（已验证：无 Key 失败 → demo 恢复 → 成功）。
 
@@ -168,6 +167,11 @@ python run.py --demo --no-parallel --rounds 2 --once "实现二分查找"
 # 历史与恢复
 python run.py --list
 python run.py --resume <run_id>
+
+# 清除全部历史运行记录（--yes 跳过交互确认）
+python run.py --clear
+python run.py --clear --yes
+# 退出码：0 = 审查通过并交付；1 = 未通过 / 达到轮次上限 / 运行失败
 ```
 
 ### 5.3 接入真实模型
@@ -184,7 +188,7 @@ python app.py
 # 浏览器打开 http://127.0.0.1:5000
 ```
 
-在左侧填写需求、选择「离线演示 / 启用并行 / 最大轮次」，点击运行；流程图节点会按实时状态变色，底部查看执行日志、代码、问题清单与测试输出；失败后可一键恢复，也可点击历史运行回看。
+在左侧填写需求、选择「离线演示 / 启用并行 / 最大轮次」，点击运行；流程图节点会按实时状态变色，底部查看执行日志、代码、问题清单与测试输出；失败后可一键恢复，也可点击历史运行回看。历史列表下方「清除历史」可删除全部历史记录（运行中的任务会自动保留）。
 
 ---
 
@@ -212,9 +216,10 @@ python app.py
 |------|------|------|
 | GET | `/api/graph` | 流程图节点/边/布局 |
 | POST | `/api/run` | 发起运行，body：`{requirement, demo, parallel, max_rounds}` |
-| GET | `/api/run/<id>` | 查询状态与事件（轮询） |
-| GET | `/api/runs` | 历史运行列表 |
-| POST | `/api/run/<id>/resume` | 从检查点恢复，body：`{demo}` |
+| GET | `/api/run/<id>` | 查询状态与事件（轮询），返回含 `status` 与 `outcome` |
+| GET | `/api/runs` | 历史运行列表（按检查点时间倒序） |
+| DELETE | `/api/runs` | 清除历史运行；body 可选 `{run_ids:[...]}`，不传则清除全部；运行中的记录保留 |
+| POST | `/api/run/<id>/resume` | 从检查点恢复，body：`{demo}`；运行中重复恢复返回 409 |
 
 ---
 
@@ -224,7 +229,7 @@ python app.py
 python tests/test_workflow.py
 ```
 
-覆盖：视图结构（并行/条件/回环）、完整并行流程（2 轮通过）、顺序模式、最大轮次优雅终止、检查点落盘与 resume 恢复、工具错误捕获。
+覆盖：视图结构（并行/条件/回环）、完整并行流程（2 轮通过）、顺序模式、最大轮次优雅终止与 `outcome`、检查点落盘与 resume 恢复、动态测试退出码判定、静态审查 fail-closed、历史运行时间排序、清除历史（保留运行中/路径逃逸防护）、CLI 退出码、Web 每次运行配置隔离。
 
 ---
 

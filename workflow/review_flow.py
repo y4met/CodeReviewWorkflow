@@ -18,9 +18,11 @@ def build_pieces(config, llm):
 
     def review_router(state) -> str:
         if state.review_passed:
+            state.outcome = "approved"
             return END
         if state.round >= config.max_rounds:
             # 达到轮次上限仍未通过也结束（避免无限循环），结论标记未通过
+            state.outcome = "max_rounds"
             return END
         return "fixer"
 

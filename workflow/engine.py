@@ -64,6 +64,7 @@ class WorkflowEngine:
             node = self._nodes.get(current)
             if node is None:
                 state.status = "failed"
+                state.outcome = "failed"
                 state.error = f"未知节点: {current}"
                 state.add_event(current, "error", message=state.error)
                 self._store.save(state)
@@ -72,6 +73,7 @@ class WorkflowEngine:
             patch = self._execute_with_retry(node, state)
             if patch is None:
                 state.status = "failed"
+                state.outcome = "failed"
                 state.error = f"节点 {current} 重试 {self._cfg.node_retries} 次后仍失败，已停止（可 resume 恢复）"
                 state.add_event(current, "error", message=state.error)
                 state.next_node = current

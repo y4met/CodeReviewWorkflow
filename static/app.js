@@ -71,7 +71,7 @@ async function loadGraph() {
     svg.appendChild(g);
   });
 
-  // 根据所有节点边界动态计算 viewBox，避免节点超出画布（四周留 padding）
+  // 根据所有节点边界动态计算 viewBox，避免节点超出画布
   const pad = 40;
   const minX = Math.min(...graphData.nodes.map((n) => n.x)) - pad;
   const minY = Math.min(...graphData.nodes.map((n) => n.y)) - pad;
@@ -116,8 +116,22 @@ function updateNodeStatus(state) {
 // 面板内容
 function renderPanels(state) {
   const badge = document.getElementById("runState");
-  badge.textContent = state.status + (state.status === "running" ? `（轮次 ${state.round}）` : "");
-  badge.className = "badge " + (state.status === "created" ? "" : state.status);
+  const done = state.status === "success";
+  let text = state.status;
+  let cls = state.status === "created" ? "" : state.status;
+  if (state.status === "running") {
+    text = `running（轮次 ${state.round}）`;
+  } else if (done) {
+    if (state.review_passed) {
+      text = "已通过并交付";
+      cls = "success";
+    } else {
+      text = state.outcome === "max_rounds" ? "未通过（达到轮次上限）" : "未通过审查";
+      cls = "failed";
+    }
+  }
+  badge.textContent = text;
+  badge.className = "badge " + cls;
 
   document.getElementById("log").innerHTML = state.events
     .map((ev) => {
@@ -182,11 +196,36 @@ document.getElementById("resumeBtn").onclick = async () => {
   poll(r.run_id);
 };
 
+// 清除历史
+document.getElementById("clearBtn").onclick = async () => {
+  if (!confirm("确定清除全部历史运行记录？正在运行的记录会保留，此操作不可恢复。")) return;
+  const r = await (await fetch("/api/runs", { method: "DELETE" })).json();
+  if (r.error) return alert(r.error);
+
+  if (currentRun && r.deleted_ids.includes(currentRun.run_id)) {
+    currentRun = null;
+    document.getElementById("runState").textContent = "就绪";
+    document.getElementById("runState").className = "badge";
+    document.getElementById("log").textContent = "(历史记录已清除)";
+    document.getElementById("code").textContent = "(无)";
+    document.getElementById("issues").textContent = "(无)";
+    document.getElementById("test").textContent = "(无)";
+    document.getElementById("resumeBtn").disabled = true;
+  }
+  await loadRuns();
+  const extra = r.skipped.length ? `，保留 ${r.skipped.length} 条运行中记录` : "";
+  alert(`已清除 ${r.deleted} 条历史记录${extra}`);
+};
+
 // 历史运行
 async function loadRuns() {
   const runs = await (await fetch("/api/runs")).json();
   const box = document.getElementById("runs");
   box.innerHTML = "";
+  if (!runs.length) {
+    box.innerHTML = '<div class="empty">暂无历史记录</div>';
+    return;
+  }
   runs.forEach((r) => {
     const d = document.createElement("div");
     d.className = "run";

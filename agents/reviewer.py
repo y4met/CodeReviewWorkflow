@@ -33,13 +33,11 @@ class RuntimeTestBranch(BaseNode):
         full = state.code
         if state.self_check:
             full = full.rstrip() + "\n\n# ---- self check ----\n" + state.self_check
-        out = self._run_python.run({"code": full})
-        # 通过判定：出现成功标记且没有错误/异常痕迹
-        passed = ("all tests passed" in out
-                  and "Traceback" not in out
-                  and "Error" not in out
-                  and "失败" not in out)
-        return {"test_output": out, "tests_passed": passed}
+        res = self._run_python.run_result({"code": full})
+        # 以退出码为准；有自检时必须出现成功标记，避免“断言没执行”被误判通过
+        marker_ok = (not state.self_check) or ("all tests passed" in res.stdout)
+        passed = res.ok and marker_ok
+        return {"test_output": res.as_text(), "tests_passed": passed}
 
 class ReviewerAgent(BaseNode):
     name = "review"
@@ -63,12 +61,15 @@ class ReviewerAgent(BaseNode):
     def _merge(results: dict, state: WorkflowState) -> dict:
         # 静态分支
         spatch, sstatus, serr = results.get("static_review", (None, "failed", "无结果"))
-        static_issues = []
-        if sstatus == "success" and spatch:
-            static_issues = spatch.get("static_issues", [])
+        static_ok = sstatus == "success" and bool(spatch)
+        if static_ok:
+            static_issues = list(spatch.get("static_issues") or [])
         else:
-            static_issues.append({"severity": "minor",
-                                  "desc": f"静态审查分支执行异常：{serr}"})
+            # 避免“LLM 故障 + 动态测试通过”被误判为审查合格。
+            static_issues = [{
+                "severity": "minor",
+                "desc": f"静态审查分支执行异常，本轮按 fail-closed 处理：{serr}",
+            }]
 
         # 动态分支
         rpatch, rstatus, rerr = results.get("runtime_test", (None, "failed", "无结果"))
@@ -86,11 +87,13 @@ class ReviewerAgent(BaseNode):
                            "desc": "动态自检未通过，运行输出如下：\n" + test_output})
 
         has_major_static = any(i.get("severity") == "major" for i in static_issues)
-        passed = tests_passed and not has_major_static
+        passed = tests_passed and static_ok and not has_major_static
 
+        static_part = ("静态分支异常（未采信本轮 LLM 结论）；"
+                       if not static_ok else f"静态发现 {len(static_issues)} 个问题；")
         summary = (
             f"第 {state.round + 1} 轮审查：动态测试{'通过' if tests_passed else '未通过'}，"
-            f"静态发现 {len(static_issues)} 个问题；"
+            + static_part
             + ("审查通过。" if passed else "需要修复。")
         )
         return {

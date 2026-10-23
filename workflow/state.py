@@ -57,6 +57,7 @@ class WorkflowState:
     round: int = 0
     next_node: str = "coder"     # 检查点恢复时从该节点继续
     status: str = "created"      # created/running/success/failed
+    outcome: str = ""            # 交付结论: ""/approved/max_rounds/failed
     enable_parallel: bool = True
     error: str | None = None
 
